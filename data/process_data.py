@@ -32,6 +32,9 @@ def clean_data(df):
 
     # Remove duplciates
     df.drop_duplicates(keep='first', inplace = True)
+    
+    # Change value 2 by 0 in the related, because in this problem won't have a difference between those values
+    df['related'] = df['related'].apply(lambda x : x%2)
 
     return df
 
@@ -53,6 +56,7 @@ def main():
 
         print('Cleaning data...')
         df = clean_data(df)
+        
 
         print('Saving data...\n    DATABASE: {}'.format(database_filepath))
         save_data(df, database_filepath)
