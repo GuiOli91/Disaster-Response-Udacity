@@ -1,6 +1,8 @@
 import sys
 import argparse
-
+import os.path
+import json
+import functools
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -14,6 +16,8 @@ import re
 import time
 import pickle
 from joblib import parallel_backend
+from datetime import datetime
+
 
 # Dowload nltk data
 try:
@@ -47,7 +51,7 @@ from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, f1_score
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV
@@ -56,11 +60,34 @@ from sklearn.compose import ColumnTransformer
 
 import matplotlib.pyplot as plt
 
+parser = argparse.ArgumentParser(description = "The script trains a \
+classifier model for the Disaster Response - Udacity project.")
+
+parser.add_argument("database", help="The path to the SQL database that will be\
+ used to train the model.")
+
+parser.add_argument("model", help="The file where the the trained model will be\
+ saved.")
+
+parser.add_argument("-v", "--verbose", help=" Will output the evaluation",
+ action = "store_true")
+
+parser.add_argument("-g", "--gridsearch", help = "Json file that will be used \
+to do a GridSearchCV to search for hyperparameters")
+
+parser.add_argument("-r", "--report", help = "Saves a report from the training",
+action = "store_true")
+
+
+args = parser.parse_args()
+
+
 def load_data(database_filepath):
     engine = create_engine('sqlite:///' + database_filepath)
     df = pd.read_sql_table(database_filepath[-19:-3], engine)
+    # NOTE: remove iloc on lines
     X = df['message']
-    Y = df.iloc[,4:]
+    Y = df.iloc[:,4:]
     return X, Y.to_numpy(), Y.columns.tolist()
 
 
@@ -94,20 +121,21 @@ def tokenize(text):
     return words
 
 
-def build_model():
+def build_model(verbose = True):
     cachedir = mkdtemp()
     model = Pipeline([('countvect', CountVectorizer(tokenizer=tokenize)),
                     ('tfidf', TfidfTransformer()),
                     ('clf', MultiOutputClassifier(RandomForestClassifier()))],
-                    memory=cachedir, verbose = True)
+                    memory=cachedir, verbose = verbose)
     return model
 
 
-def evaluate_model(model, X_test, Y_test, category_names):
+def evaluate_model(model, X_test, Y_test, category_names, verbose):
     y_pred = model.predict(X_test)
     for i in range(len(category_names)):
-        print(category_names[i])
-        print(classification_report(Y_test[:,i], y_pred[:,i], zero_division=0))
+        if verbose:
+            print(category_names[i])
+            print(classification_report(Y_test[:,i], y_pred[:,i], zero_division=0))
 
 
 def save_model(model, model_filepath):
@@ -117,11 +145,32 @@ def save_model(model, model_filepath):
 
 
 def main():
-    if len(sys.argv) == 3:
-        database_filepath, model_filepath = sys.argv[1:]
-        print('Loading data...\n    DATABASE: {}'.format(database_filepath))
-        X, Y, category_names = load_data(database_filepath)
-        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
+
+    print('Loading data...\n    DATABASE: {}'.format(args.database))
+    X, Y, category_names = load_data(args.database)
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
+
+
+    if args.gridsearch:
+        if os.path.exists(args.gridsearch):
+            try:
+                with open(args.gridsearch, 'r') as file:
+                    gridparameter = json.load(file)
+            except Exception as e:
+                raise TypeError("Only json files are allowed")
+
+            print('Building a model...')
+            model = build_model(verbose=False)
+            print('Searching for hyperparameters...')
+            # f1_score_macro = functools.partial(f1_score, average='macro', zero_division=0)
+            cv = GridSearchCV(model, param_grid = gridparameter, scoring = 'f1_samples', verbose = 3)
+            cv.fit(X_train, Y_train)
+            model = cv.best_estimator_
+
+        else:
+            print(f"The file {args.gridsearch} doesn't exist.")
+            return
+    else:
 
         print('Building model...')
         model = build_model()
@@ -130,19 +179,23 @@ def main():
         with parallel_backend('threading', n_jobs=-3):
             model.fit(X_train, Y_train)
 
-        print('Evaluating model...')
-        evaluate_model(model, X_test, Y_test, category_names)
 
-        print('Saving model...\n    MODEL: {}'.format(model_filepath))
-        save_model(model, model_filepath)
+    print('Evaluating model...')
 
-        print('Trained model saved!')
+    if args.report:
+        path = os.path.split(os.path.abspath(__file__))[0]
+        date = datetime.today().strftime('%Y%m%d_%H%M%S')
+        if args.gridsearch:
+            results = pd.DataFrame(cv.cv_results_)
+            file = os.path.join(path, "report_gridsearch" + date + ".csv")
+            results.to_csv(file)
 
-    else:
-        print('Please provide the filepath of the disaster messages database '\
-              'as the first argument and the filepath of the pickle file to '\
-              'save the model to as the second argument. \n\nExample: python '\
-              'train_classifier.py ../data/DisasterResponse.db classifier.pkl')
+    evaluate_model(model, X_test, Y_test, category_names, verbose=args.verbose)
+
+    print('Saving model...\n    MODEL: {}'.format(args.model))
+    save_model(model, args.model)
+
+    print('Trained model saved!')
 
 
 if __name__ == '__main__':

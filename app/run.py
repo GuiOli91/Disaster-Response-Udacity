@@ -44,44 +44,43 @@ def index():
     # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
-    
+
     # Top 10 labels
-    
+
     countcategory = df.iloc[:,4:].sum(axis=0)
     countcategory = countcategory.sort_values(ascending=False)
-    
+
     #Quantity of labels per message
-    
+
     countlabels = df.iloc[:,4:].sum(axis = 1)
     countlabels = countlabels.value_counts()
-    print(str(countlabels.index))
     labels = [str(label) +' labels' for label in countlabels.index]
     values = countlabels.values
-    
 
-    
-    # Categories Heatmap
-    heatdf = pd.DataFrame()
-    for col in df.iloc[:,5:].columns:
-        groupbydf = df.iloc[:,5:].query('{0} == 1'.format(col)).groupby(col)
-        sumdf = groupbydf.sum()
-        if sumdf.shape[0] == 1:
-            concatdf = sumdf
-            concatdf.rename(index={1:col},inplace=True)
-            concatdf.index.name = None
 
-        else:
-            concatdf = pd.DataFrame(data = np.repeat(0, len(df.iloc[:,5:].columns)))
-            concatdf = concatdf.transpose()
-            concatdf.columns = df.iloc[:,5:].columns
-            concatdf.rename(index = {0:col}, inplace=True)
 
-        heatdf = pd.concat([heatdf, concatdf], axis = 0)
-    heatdf.sort_index(inplace=True)
-    heatdf.sort_index(axis=1, inplace=True)
-    feature_x = heatdf.columns 
-    feature_y = heatdf.index
-    heatdf = heatdf.to_numpy()
+    # # Categories Heatmap
+    # heatdf = pd.DataFrame()
+    # for col in df.iloc[:,5:].columns:
+    #     groupbydf = df.iloc[:,5:].query('{0} == 1'.format(col)).groupby(col)
+    #     sumdf = groupbydf.sum()
+    #     if sumdf.shape[0] == 1:
+    #         concatdf = sumdf
+    #         concatdf.rename(index={1:col},inplace=True)
+    #         concatdf.index.name = None
+    #
+    #     else:
+    #         concatdf = pd.DataFrame(data = np.repeat(0, len(df.iloc[:,5:].columns)))
+    #         concatdf = concatdf.transpose()
+    #         concatdf.columns = df.iloc[:,5:].columns
+    #         concatdf.rename(index = {0:col}, inplace=True)
+    #
+    #     heatdf = pd.concat([heatdf, concatdf], axis = 0)
+    # heatdf.sort_index(inplace=True)
+    # heatdf.sort_index(axis=1, inplace=True)
+    # feature_x = heatdf.columns
+    # feature_y = heatdf.index
+    # heatdf = heatdf.to_numpy()
 
 
     # create visuals
@@ -110,9 +109,9 @@ def index():
                 Bar(
                     x=countcategory[:10].index,
                     y=countcategory[:10].values
-                
+
                 )
-            
+
             ],
 
             'layout': {
@@ -131,9 +130,9 @@ def index():
                     labels=labels,
                     parents=[""]*len(labels),
                     values =  values,
-                
+
                 )
-            
+
             ],
 
             'layout': {
@@ -145,19 +144,19 @@ def index():
                     'title': "Labels"
                 }
             }
-        },
-        {
-            'data': [
-                Heatmap(
-                        x = feature_x, y = feature_y, z = heatdf
-                )
-
-            ],
-            'layout':{
-                'title': 'Distribution between Labels',
-                
-            }
-        }
+        }#,
+        # {
+        #     'data': [
+        #         Heatmap(
+        #                 x = feature_x, y = feature_y, z = heatdf
+        #         )
+        #
+        #     ],
+        #     'layout':{
+        #         'title': 'Distribution between Labels',
+        #
+        #     }
+        # }
     ]
 
     # encode plotly graphs in JSON
