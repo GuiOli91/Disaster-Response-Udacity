@@ -60,6 +60,8 @@ from sklearn.compose import ColumnTransformer
 
 import matplotlib.pyplot as plt
 
+# Create custom options to run the code.
+
 parser = argparse.ArgumentParser(description = "The script trains a \
 classifier model for the Disaster Response - Udacity project.")
 
@@ -83,6 +85,18 @@ args = parser.parse_args()
 
 
 def load_data(database_filepath):
+    """
+    Loads the data from a SQL database and returns the values for the model.
+
+    Parameters:
+    database_filepath (string): Path to the SQL Database
+
+    Returns:
+    pandas.Series:  Serie with the inputs for the trains
+    numpy.ndarray:  Matrix with the labels for each inputs
+    list:           List with name for each labels
+    """
+
     engine = create_engine('sqlite:///' + database_filepath)
     df = pd.read_sql_table(database_filepath[-19:-3], engine)
     # NOTE: remove iloc on lines
@@ -92,6 +106,22 @@ def load_data(database_filepath):
 
 
 def tokenize(text):
+    """
+    Returns tokens from messages.
+
+    Receives unstructured data (messages) and do some taks:
+        - Removes urls starting with http.
+        - Separete each message by word.
+        - Removes stop words.
+        - Lemmatize the words.
+        - Stem the words.
+
+    Parameters:
+    text (list):    Array like of strings.
+
+    Returns:
+    list:           2d List of tokens.
+    """
 
     #remove urls
     url_regex = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
@@ -122,6 +152,15 @@ def tokenize(text):
 
 
 def build_model(verbose = True):
+    """
+    Returns a pre-defined model to be trained by the algorithm.
+
+    Parameters:
+    verbose (boolean):  Sets the verbosity of the model.
+
+    Returns:
+    sklearn.pipeline.Pipeline:  A model defined in a Pipeline.
+    """
     cachedir = mkdtemp()
     model = Pipeline([('countvect', CountVectorizer(tokenizer=tokenize)),
                     ('tfidf', TfidfTransformer()),
@@ -131,6 +170,19 @@ def build_model(verbose = True):
 
 
 def evaluate_model(model, X_test, Y_test, category_names, verbose):
+    """
+    Prints the confusion matrix per label
+
+    Parameters:
+    model (sklearn.pipeline.Pipeline): Trained model
+    X_test (pandas.series): Serie with messages.
+    Y_test (numpy.ndarray): Matrix with labels for each input
+    category_names (list): List with name for each labels
+    verbose (boolean): If True outputs the results on the terminal
+
+    Returns:
+    sklearn.pipeline.Pipeline:  A model defined in a Pipeline.
+    """
     y_pred = model.predict(X_test)
     for i in range(len(category_names)):
         if verbose:
@@ -139,6 +191,13 @@ def evaluate_model(model, X_test, Y_test, category_names, verbose):
 
 
 def save_model(model, model_filepath):
+    """
+    Saves the model in a binary format on the received path.
+
+    Parameters:
+    model (sklearn.pipeline.Pipeline): Trained model to be saved.
+    model_filepath (string): Path to where the model will be saved
+    """
     rmtree(model.memory)
     with open(model_filepath, 'wb') as f:
         pickle.dump(model, f)

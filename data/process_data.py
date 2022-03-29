@@ -7,12 +7,36 @@ startTime = time.time()
 
 
 def load_data(messages_filepath, categories_filepath):
+    """
+    Load csv data from a received paths.
+
+    Parameters:
+    messages_filepath (string): Path to the messages file.
+    categories_filepath (string): Path to the categories file.
+
+    Returns:
+    pandas.Dataframe:  Merged Dataframe.
+    """
     messages = pd.read_csv(messages_filepath)
     categories = pd.read_csv(categories_filepath)
     # Merge the datasets
     return messages.merge(categories, left_on = 'id', right_on = 'id')
 
 def clean_data(df):
+    """
+    Cleans a Dataframe.
+
+        - Split the categories.
+        - Transfom the string from the labels into 0 or 1
+        - Drop duplicate rows.
+        - Change value 2 into 0 in 'related' label.
+
+    Parameters:
+    df (pandas.Dataframe): A dataframe to be cleaned.
+
+    Returns:
+    pandas.Dataframe:  Cleaned dataframe.
+    """
 
     # Split the categories into separate columns
     categories = df['categories'].str.split(";",expand=True)
@@ -32,7 +56,7 @@ def clean_data(df):
 
     # Remove duplciates
     df.drop_duplicates(keep='first', inplace = True)
-    
+
     # Change value 2 by 0 in the related, because in this problem won't have a difference between those values
     df['related'] = df['related'].apply(lambda x : x%2)
 
@@ -41,6 +65,13 @@ def clean_data(df):
 
 
 def save_data(df, database_filename):
+    """
+    Saves the Dataframe on the received path.
+
+    Parameters:
+    df (pandas.DataFrame): Dataframe to be saved.
+    database_filename (string): Path to where the Dataframe will be saved.
+    """
     engine = create_engine('sqlite:///' + database_filename)
     df.to_sql(database_filename[5:-3], engine, index=False, if_exists='replace')
 
@@ -56,7 +87,7 @@ def main():
 
         print('Cleaning data...')
         df = clean_data(df)
-        
+
 
         print('Saving data...\n    DATABASE: {}'.format(database_filepath))
         save_data(df, database_filepath)

@@ -39,6 +39,13 @@ model = pickle.load(open("../models/classifier.pkl", 'rb'))
 @app.route('/')
 @app.route('/index')
 def index():
+    """
+    Returns the master.html concatenate with the plotly graphs.
+
+    Returns:
+
+    string : Renderization of the master.html with the graphs.
+    """
 
     # extract data needed for visuals
     # TODO: Below is an example - modify to extract data for your own visuals
@@ -56,32 +63,6 @@ def index():
     countlabels = countlabels.value_counts()
     labels = [str(label) +' labels' for label in countlabels.index]
     values = countlabels.values
-
-
-
-    # # Categories Heatmap
-    # heatdf = pd.DataFrame()
-    # for col in df.iloc[:,5:].columns:
-    #     groupbydf = df.iloc[:,5:].query('{0} == 1'.format(col)).groupby(col)
-    #     sumdf = groupbydf.sum()
-    #     if sumdf.shape[0] == 1:
-    #         concatdf = sumdf
-    #         concatdf.rename(index={1:col},inplace=True)
-    #         concatdf.index.name = None
-    #
-    #     else:
-    #         concatdf = pd.DataFrame(data = np.repeat(0, len(df.iloc[:,5:].columns)))
-    #         concatdf = concatdf.transpose()
-    #         concatdf.columns = df.iloc[:,5:].columns
-    #         concatdf.rename(index = {0:col}, inplace=True)
-    #
-    #     heatdf = pd.concat([heatdf, concatdf], axis = 0)
-    # heatdf.sort_index(inplace=True)
-    # heatdf.sort_index(axis=1, inplace=True)
-    # feature_x = heatdf.columns
-    # feature_y = heatdf.index
-    # heatdf = heatdf.to_numpy()
-
 
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
@@ -144,19 +125,7 @@ def index():
                     'title': "Labels"
                 }
             }
-        }#,
-        # {
-        #     'data': [
-        #         Heatmap(
-        #                 x = feature_x, y = feature_y, z = heatdf
-        #         )
-        #
-        #     ],
-        #     'layout':{
-        #         'title': 'Distribution between Labels',
-        #
-        #     }
-        # }
+        }
     ]
 
     # encode plotly graphs in JSON
@@ -170,6 +139,13 @@ def index():
 # web page that handles user query and displays model results
 @app.route('/go')
 def go():
+    """
+    Returns the go.html concatenate with the query.
+
+    Returns:
+
+    string : Renderization of the go.html with the graphs.
+    """
     # save user input in query
     query = request.args.get('query', '')
 
